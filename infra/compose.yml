@@ -1,0 +1,45 @@
+name: ${PROJECT_NAME}
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - type: bind
+        source: ..
+        target: /workspace
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "3000"
+        protocol: tcp
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    depends_on:
+      - postgres
+    tty: true
+    stdin_open: true
+    env_file:
+      - .env
+  postgres:
+    image: postgres:18.1-alpine3.23
+    env_file:
+      - .env
+    volumes:
+      - type: volume
+        source: pgdata
+        target: /var/lib/postgresql
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - mode: ingress
+        target: 80
+        published: "5050"
+        protocol: tcp
+    env_file:
+      - .env
+volumes:
+  pgdata:
+    name: ${PROJECT_NAME}-postgres-vol

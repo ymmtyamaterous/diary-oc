@@ -1,0 +1,13 @@
+{
+    "name": "your-project-name",
+    "dockerComposeFile": "../infra/compose.yml",
+    "service": "dev",
+    "workspaceFolder": "/workspace",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "GitHub.copilot"
+            ]
+        }
+    }
+}
