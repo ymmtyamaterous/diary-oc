@@ -79,6 +79,32 @@ paths:
         '200':
           description: OK
   /api/diaries/{id}:
+    put:
+      summary: Update diary
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiaryCreateRequest'
+      responses:
+        '200':
+          description: Updated
+        '400':
+          description: Validation error
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
     delete:
       summary: Delete diary
       security:

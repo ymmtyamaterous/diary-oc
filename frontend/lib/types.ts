@@ -67,3 +67,17 @@ export type ApiResponse<T> = {
 export type ApiError = {
   error: string;
 };
+
+export type DiaryFieldKey =
+  | "events"
+  | "emotions"
+  | "good_things"
+  | "reflections"
+  | "gratitude"
+  | "tomorrow_goals"
+  | "tomorrow_looking_forward"
+  | "learnings"
+  | "health_habits"
+  | "today_in_one_word";
+
+export type DiaryFieldSettings = Record<DiaryFieldKey, boolean>;

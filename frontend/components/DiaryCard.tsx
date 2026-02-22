@@ -4,6 +4,7 @@ import { apiFileUrl } from "@/lib/api";
 type Props = {
   entry: DiaryEntry | PublicDiaryEntry;
   showActions?: boolean;
+  onEdit?: () => void;
   onToggle?: () => void;
   onDelete?: () => void;
 };
@@ -19,7 +20,7 @@ const weatherIcon: Record<string, string> = {
   windy: "💨",
 };
 
-export function DiaryCard({ entry, showActions = false, onToggle, onDelete }: Props) {
+export function DiaryCard({ entry, showActions = false, onEdit, onToggle, onDelete }: Props) {
   const imageUrl = apiFileUrl("image_url" in entry ? entry.image_url : null);
   const audioUrl = apiFileUrl("audio_url" in entry ? entry.audio_url : null);
   const weather = entry.weather ? `${weatherIcon[entry.weather] ?? "🌤️"} ${entry.weather}` : "";
@@ -67,6 +68,13 @@ export function DiaryCard({ entry, showActions = false, onToggle, onDelete }: Pr
 
       {showActions ? (
         <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded bg-sky-500 px-3 py-1.5 text-sm text-white hover:bg-sky-600"
+          >
+            編集
+          </button>
           <button
             type="button"
             onClick={onToggle}

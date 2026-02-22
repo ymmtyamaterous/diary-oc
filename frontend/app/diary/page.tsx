@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { apiRequest } from "@/lib/api";
 import { clearAuthToken, getAuthToken } from "@/lib/auth";
-import type { DiaryEntry } from "@/lib/types";
+import {
+  DIARY_FIELD_ITEMS,
+  getDefaultDiaryFieldSettings,
+  loadDiaryFieldSettings,
+} from "@/lib/settings";
+import type { DiaryEntry, DiaryFieldSettings } from "@/lib/types";
 import { DiaryCard } from "@/components/DiaryCard";
 
 type DiaryForm = {
@@ -50,6 +55,27 @@ const defaultForm = (): DiaryForm => ({
   audio_name: "",
 });
 
+const entryToForm = (entry: DiaryEntry): DiaryForm => ({
+  date: entry.date,
+  weather: entry.weather ?? "",
+  is_public: entry.is_public,
+  content: entry.content ?? "",
+  events: entry.events ?? "",
+  emotions: entry.emotions ?? "",
+  good_things: entry.good_things ?? "",
+  reflections: entry.reflections ?? "",
+  gratitude: entry.gratitude ?? "",
+  tomorrow_goals: entry.tomorrow_goals ?? "",
+  tomorrow_looking_forward: entry.tomorrow_looking_forward ?? "",
+  learnings: entry.learnings ?? "",
+  health_habits: entry.health_habits ?? "",
+  today_in_one_word: entry.today_in_one_word ?? "",
+  image_url: entry.image_url ?? "",
+  image_name: entry.image_name ?? "",
+  audio_url: entry.audio_url ?? "",
+  audio_name: entry.audio_name ?? "",
+});
+
 const weatherOptions = [
   { value: "", label: "未選択" },
   { value: "sunny", label: "☀️ 晴れ" },
@@ -68,8 +94,17 @@ export default function DiaryPage() {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [form, setForm] = useState<DiaryForm>(defaultForm());
   const [loading, setLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null);
+  const [editForm, setEditForm] = useState<DiaryForm>(defaultForm());
+  const [fieldSettings] = useState<DiaryFieldSettings>(() => {
+    if (typeof window === "undefined") {
+      return getDefaultDiaryFieldSettings();
+    }
+    return loadDiaryFieldSettings();
+  });
 
   useEffect(() => {
     const currentToken = getAuthToken();
@@ -112,11 +147,39 @@ export default function DiaryPage() {
     ].some((v) => v.trim().length > 0);
   }, [form]);
 
+  const hasEditContent = useMemo(() => {
+    return [
+      editForm.content,
+      editForm.events,
+      editForm.emotions,
+      editForm.good_things,
+      editForm.reflections,
+      editForm.gratitude,
+      editForm.tomorrow_goals,
+      editForm.tomorrow_looking_forward,
+      editForm.learnings,
+      editForm.health_habits,
+      editForm.today_in_one_word,
+    ].some((v) => v.trim().length > 0);
+  }, [editForm]);
+
+  const visibleFieldItems = useMemo(() => {
+    return DIARY_FIELD_ITEMS.filter((item) => fieldSettings[item.key]);
+  }, [fieldSettings]);
+
   const update = (key: keyof DiaryForm, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const uploadFile = async (e: ChangeEvent<HTMLInputElement>, kind: "image" | "audio") => {
+  const updateEdit = (key: keyof DiaryForm, value: string | boolean) => {
+    setEditForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const uploadFile = async (
+    e: ChangeEvent<HTMLInputElement>,
+    kind: "image" | "audio",
+    target: "create" | "edit",
+  ) => {
     if (!token || !e.target.files?.[0]) {
       return;
     }
@@ -132,11 +195,21 @@ export default function DiaryPage() {
         isForm: true,
       });
       if (kind === "image") {
-        update("image_url", data.url);
-        update("image_name", data.name);
+        if (target === "create") {
+          update("image_url", data.url);
+          update("image_name", data.name);
+        } else {
+          updateEdit("image_url", data.url);
+          updateEdit("image_name", data.name);
+        }
       } else {
-        update("audio_url", data.url);
-        update("audio_name", data.name);
+        if (target === "create") {
+          update("audio_url", data.url);
+          update("audio_name", data.name);
+        } else {
+          updateEdit("audio_url", data.url);
+          updateEdit("audio_name", data.name);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "アップロードに失敗しました");
@@ -203,6 +276,45 @@ export default function DiaryPage() {
     }
   };
 
+  const openEditModal = (entry: DiaryEntry) => {
+    setEditingEntry(entry);
+    setEditForm(entryToForm(entry));
+    setError(null);
+  };
+
+  const closeEditModal = () => {
+    setEditingEntry(null);
+    setEditForm(defaultForm());
+  };
+
+  const submitEditDiary = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!token || !editingEntry) {
+      return;
+    }
+    setError(null);
+
+    if (!hasEditContent) {
+      setError("少なくとも1つの項目を入力してください");
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      await apiRequest<DiaryEntry>(`/api/diaries/${editingEntry.id}`, {
+        method: "PUT",
+        token,
+        body: editForm,
+      });
+      await fetchDiaries(token);
+      closeEditModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "更新に失敗しました");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
       <section className="rounded-xl border border-zinc-200 bg-white p-5 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
@@ -226,7 +338,7 @@ export default function DiaryPage() {
               <select
                 value={form.weather}
                 onChange={(e) => update("weather", e.target.value)}
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               >
                 {weatherOptions.map((w) => (
                   <option key={w.value} value={w.value}>
@@ -244,23 +356,12 @@ export default function DiaryPage() {
             className="min-h-28 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
           />
 
-          {([
-            ["events", "📝 出来事"],
-            ["emotions", "💭 感情"],
-            ["good_things", "😊 よかったこと"],
-            ["reflections", "🤔 反省点"],
-            ["gratitude", "🙏 感謝したこと"],
-            ["tomorrow_goals", "🎯 明日の目標"],
-            ["tomorrow_looking_forward", "✨ 明日の楽しみ"],
-            ["learnings", "💡 学んだこと・気づき"],
-            ["health_habits", "💪 健康・習慣"],
-            ["today_in_one_word", "🏷️ 今日を一言で"],
-          ] as const).map(([key, label]) => (
-            <div key={key}>
-              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">{label}</label>
+          {visibleFieldItems.map((item) => (
+            <div key={item.key}>
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">{item.label}</label>
               <textarea
-                value={form[key]}
-                onChange={(e) => update(key, e.target.value)}
+                value={form[item.key]}
+                onChange={(e) => update(item.key, e.target.value)}
                 className="min-h-20 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
               />
             </div>
@@ -273,7 +374,7 @@ export default function DiaryPage() {
                 className="w-full cursor-pointer rounded-md border border-zinc-300 bg-white p-2 text-sm text-zinc-700 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-1.5 file:font-medium file:text-white hover:file:bg-sky-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
                 type="file"
                 accept="image/*"
-                onChange={(e) => uploadFile(e, "image")}
+                onChange={(e) => uploadFile(e, "image", "create")}
               />
             </div>
             <div>
@@ -282,7 +383,7 @@ export default function DiaryPage() {
                 className="w-full cursor-pointer rounded-md border border-zinc-300 bg-white p-2 text-sm text-zinc-700 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:font-medium file:text-white hover:file:bg-emerald-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
                 type="file"
                 accept=".mp3,.wav,.ogg,.m4a,.aac,.webm,audio/*"
-                onChange={(e) => uploadFile(e, "audio")}
+                onChange={(e) => uploadFile(e, "audio", "create")}
               />
             </div>
           </div>
@@ -313,6 +414,7 @@ export default function DiaryPage() {
             key={entry.id}
             entry={entry}
             showActions
+            onEdit={() => openEditModal(entry)}
             onToggle={() => {
               void toggleVisibility(entry);
             }}
@@ -343,6 +445,107 @@ export default function DiaryPage() {
                 削除
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {editingEntry ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-5 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+            <h3 className="mb-4 text-lg font-semibold">日記を編集</h3>
+            <form onSubmit={submitEditDiary} className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">日付</label>
+                  <input
+                    type="date"
+                    value={editForm.date}
+                    onChange={(e) => updateEdit("date", e.target.value)}
+                    className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">天気</label>
+                  <select
+                    value={editForm.weather}
+                    onChange={(e) => updateEdit("weather", e.target.value)}
+                    className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                  >
+                    {weatherOptions.map((w) => (
+                      <option key={w.value} value={w.value}>
+                        {w.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <textarea
+                placeholder="今日のことを書いてください..."
+                value={editForm.content}
+                onChange={(e) => updateEdit("content", e.target.value)}
+                className="min-h-28 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+              />
+
+              {visibleFieldItems.map((item) => (
+                <div key={item.key}>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">{item.label}</label>
+                  <textarea
+                    value={editForm[item.key]}
+                    onChange={(e) => updateEdit(item.key, e.target.value)}
+                    className="min-h-20 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                  />
+                </div>
+              ))}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">画像（5MBまで）</label>
+                  <input
+                    className="w-full cursor-pointer rounded-md border border-zinc-300 bg-white p-2 text-sm text-zinc-700 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-1.5 file:font-medium file:text-white hover:file:bg-sky-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => uploadFile(e, "image", "edit")}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">音声（10MBまで）</label>
+                  <input
+                    className="w-full cursor-pointer rounded-md border border-zinc-300 bg-white p-2 text-sm text-zinc-700 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:font-medium file:text-white hover:file:bg-emerald-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                    type="file"
+                    accept=".mp3,.wav,.ogg,.m4a,.aac,.webm,audio/*"
+                    onChange={(e) => uploadFile(e, "audio", "edit")}
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_public}
+                  onChange={(e) => updateEdit("is_public", e.target.checked)}
+                />
+                この日記を公開する
+              </label>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="rounded border border-zinc-300 px-3 py-1.5 text-zinc-800 dark:border-zinc-700 dark:text-zinc-100"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:opacity-60"
+                >
+                  {editLoading ? "保存中..." : "保存する"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}

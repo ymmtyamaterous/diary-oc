@@ -81,6 +81,12 @@ export function AppHeader() {
           >
             🌍 みんなの日記
           </Link>
+          <Link
+            href="/settings"
+            className="rounded-md px-3 py-1.5 text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            ⚙️ 設定
+          </Link>
           <button
             type="button"
             onClick={toggleTheme}

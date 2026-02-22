@@ -44,7 +44,7 @@ func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: s.cfg.AllowedOrigins,
-		AllowedMethods: []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
 		MaxAge:         300,
 	}))
@@ -59,6 +59,7 @@ func (s *Server) Router() http.Handler {
 		api.Get("/diaries/public", s.handleListPublicDiaries)
 		api.With(s.authMiddleware).Get("/diaries", s.handleListMyDiaries)
 		api.With(s.authMiddleware).Post("/diaries", s.handleCreateDiary)
+		api.With(s.authMiddleware).Put("/diaries/{id}", s.handleUpdateDiary)
 		api.With(s.authMiddleware).Delete("/diaries/{id}", s.handleDeleteDiary)
 		api.With(s.authMiddleware).Patch("/diaries/{id}/visibility", s.handleUpdateVisibility)
 
@@ -301,31 +302,7 @@ func (s *Server) handleCreateDiary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(payload.Date) == "" {
-		writeError(w, http.StatusBadRequest, "日付は必須です")
-		return
-	}
-	if _, err := time.Parse("2006-01-02", payload.Date); err != nil {
-		writeError(w, http.StatusBadRequest, "日付形式が不正です")
-		return
-	}
-	if err := validation.ValidateWeather(payload.Weather); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := validation.ValidateDiaryFilled(map[string]*string{
-		"content":                  payload.Content,
-		"events":                   payload.Events,
-		"emotions":                 payload.Emotions,
-		"good_things":              payload.GoodThings,
-		"reflections":              payload.Reflections,
-		"gratitude":                payload.Gratitude,
-		"tomorrow_goals":           payload.TomorrowGoals,
-		"tomorrow_looking_forward": payload.TomorrowLookingForward,
-		"learnings":                payload.Learnings,
-		"health_habits":            payload.HealthHabits,
-		"today_in_one_word":        payload.TodayInOneWord,
-	}); err != nil {
+	if err := validateDiaryPayload(payload); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -407,6 +384,139 @@ func (s *Server) handleCreateDiary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeData(w, http.StatusCreated, entry)
+}
+
+func (s *Server) handleUpdateDiary(w http.ResponseWriter, r *http.Request) {
+	userID, ok := getUserID(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "認証トークンが無効です")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	if _, err := uuid.Parse(id); err != nil {
+		writeError(w, http.StatusBadRequest, "日記IDが不正です")
+		return
+	}
+
+	var payload diaryCreatePayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, http.StatusBadRequest, "不正なリクエストです")
+		return
+	}
+	if err := validateDiaryPayload(payload); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	var ownerID string
+	err := s.db.QueryRow(r.Context(), `
+		SELECT user_id
+		FROM diary_entries
+		WHERE id = $1
+	`, id).Scan(&ownerID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "日記が見つかりません")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "日記更新に失敗しました")
+		return
+	}
+	if ownerID != userID {
+		writeError(w, http.StatusForbidden, "この日記を変更する権限がありません")
+		return
+	}
+
+	var entry model.DiaryEntry
+	var entryDate pgtype.Date
+	err = s.db.QueryRow(r.Context(), `
+		UPDATE diary_entries
+		SET
+			content = $1,
+			date = $2,
+			weather = $3,
+			is_public = $4,
+			image_url = $5,
+			image_name = $6,
+			audio_url = $7,
+			audio_name = $8,
+			events = $9,
+			emotions = $10,
+			good_things = $11,
+			reflections = $12,
+			gratitude = $13,
+			tomorrow_goals = $14,
+			tomorrow_looking_forward = $15,
+			learnings = $16,
+			health_habits = $17,
+			today_in_one_word = $18,
+			updated_at = NOW()
+		WHERE id = $19
+		RETURNING
+			id, user_id, content, date, weather, is_public,
+			image_url, image_name, audio_url, audio_name,
+			events, emotions, good_things, reflections, gratitude,
+			tomorrow_goals, tomorrow_looking_forward, learnings,
+			health_habits, today_in_one_word,
+			created_at, updated_at
+	`,
+		emptyToNil(payload.Content),
+		payload.Date,
+		emptyToNil(payload.Weather),
+		payload.IsPublic,
+		emptyToNil(payload.ImageURL),
+		emptyToNil(payload.ImageName),
+		emptyToNil(payload.AudioURL),
+		emptyToNil(payload.AudioName),
+		emptyToNil(payload.Events),
+		emptyToNil(payload.Emotions),
+		emptyToNil(payload.GoodThings),
+		emptyToNil(payload.Reflections),
+		emptyToNil(payload.Gratitude),
+		emptyToNil(payload.TomorrowGoals),
+		emptyToNil(payload.TomorrowLookingForward),
+		emptyToNil(payload.Learnings),
+		emptyToNil(payload.HealthHabits),
+		emptyToNil(payload.TodayInOneWord),
+		id,
+	).Scan(
+		&entry.ID,
+		&entry.UserID,
+		newNullableString(&entry.Content),
+		&entryDate,
+		newNullableString(&entry.Weather),
+		&entry.IsPublic,
+		newNullableString(&entry.ImageURL),
+		newNullableString(&entry.ImageName),
+		newNullableString(&entry.AudioURL),
+		newNullableString(&entry.AudioName),
+		newNullableString(&entry.Events),
+		newNullableString(&entry.Emotions),
+		newNullableString(&entry.GoodThings),
+		newNullableString(&entry.Reflections),
+		newNullableString(&entry.Gratitude),
+		newNullableString(&entry.TomorrowGoals),
+		newNullableString(&entry.TomorrowLookingForward),
+		newNullableString(&entry.Learnings),
+		newNullableString(&entry.HealthHabits),
+		newNullableString(&entry.TodayInOneWord),
+		&entry.CreatedAt,
+		&entry.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "日記が見つかりません")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "日記更新に失敗しました")
+		return
+	}
+	if entryDate.Valid {
+		entry.Date = entryDate.Time.Format("2006-01-02")
+	}
+
+	writeData(w, http.StatusOK, entry)
 }
 
 func (s *Server) handleDeleteDiary(w http.ResponseWriter, r *http.Request) {
@@ -794,6 +904,34 @@ func ensureDir(dir string) error {
 	return os.MkdirAll(dir, 0o755)
 }
 
+func validateDiaryPayload(payload diaryCreatePayload) error {
+	if strings.TrimSpace(payload.Date) == "" {
+		return errors.New("日付は必須です")
+	}
+	if _, err := time.Parse("2006-01-02", payload.Date); err != nil {
+		return errors.New("日付形式が不正です")
+	}
+	if err := validation.ValidateWeather(payload.Weather); err != nil {
+		return err
+	}
+	if err := validation.ValidateDiaryFilled(map[string]*string{
+		"content":                  payload.Content,
+		"events":                   payload.Events,
+		"emotions":                 payload.Emotions,
+		"good_things":              payload.GoodThings,
+		"reflections":              payload.Reflections,
+		"gratitude":                payload.Gratitude,
+		"tomorrow_goals":           payload.TomorrowGoals,
+		"tomorrow_looking_forward": payload.TomorrowLookingForward,
+		"learnings":                payload.Learnings,
+		"health_habits":            payload.HealthHabits,
+		"today_in_one_word":        payload.TodayInOneWord,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func saveUpload(file multipart.File, header *multipart.FileHeader, destDir, prefix string, imageOnly bool) (string, string, error) {
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if ext == "" {
@@ -809,17 +947,17 @@ func saveUpload(file multipart.File, header *multipart.FileHeader, destDir, pref
 		}
 	}
 
-	head := make([]byte, 512)
-	n, _ := file.Read(head)
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		return "", "", errors.New("アップロード処理に失敗しました")
-	}
-	contentType := http.DetectContentType(head[:n])
 	if imageOnly {
+		head := make([]byte, 512)
+		n, _ := file.Read(head)
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return "", "", errors.New("アップロード処理に失敗しました")
+		}
+		contentType := http.DetectContentType(head[:n])
 		if !strings.HasPrefix(contentType, "image/") {
 			return "", "", errors.New("画像ファイルのみアップロードできます")
 		}
-	} else if !isAllowedAudioContentType(contentType) {
+	} else if audioContentTypeFromExt(ext) == "" {
 		return "", "", errors.New("音声ファイルのみアップロードできます")
 	}
 
@@ -858,19 +996,24 @@ func isAllowedAudioExt(ext string) bool {
 }
 
 func isAllowedAudioContentType(contentType string) bool {
-	allowed := []string{
-		"audio/mpeg",
-		"audio/wav",
-		"audio/x-wav",
-		"audio/ogg",
-		"audio/mp4",
-		"audio/aac",
-		"audio/webm",
+	return contentType != ""
+}
+
+func audioContentTypeFromExt(ext string) string {
+	switch ext {
+	case ".mp3":
+		return "audio/mpeg"
+	case ".wav":
+		return "audio/wav"
+	case ".ogg":
+		return "audio/ogg"
+	case ".m4a":
+		return "audio/mp4"
+	case ".aac":
+		return "audio/aac"
+	case ".webm":
+		return "audio/webm"
+	default:
+		return ""
 	}
-	for _, v := range allowed {
-		if contentType == v {
-			return true
-		}
-	}
-	return false
 }
