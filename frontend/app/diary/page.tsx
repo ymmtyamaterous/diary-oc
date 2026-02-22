@@ -3,7 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { apiRequest } from "@/lib/api";
+import { apiFileUrl, apiRequest } from "@/lib/api";
 import { clearAuthToken, getAuthToken } from "@/lib/auth";
 import {
   DIARY_FIELD_ITEMS,
@@ -301,11 +301,36 @@ export default function DiaryPage() {
 
     setEditLoading(true);
     try {
+      const originalImageName = editingEntry.image_name;
+      const originalAudioName = editingEntry.audio_name;
+
       await apiRequest<DiaryEntry>(`/api/diaries/${editingEntry.id}`, {
         method: "PUT",
         token,
         body: editForm,
       });
+
+      const fileDeleteTasks: Promise<unknown>[] = [];
+      if (originalImageName && originalImageName !== editForm.image_name) {
+        fileDeleteTasks.push(
+          apiRequest<{ message: string }>(`/api/files/${encodeURIComponent(originalImageName)}`, {
+            method: "DELETE",
+            token,
+          }),
+        );
+      }
+      if (originalAudioName && originalAudioName !== editForm.audio_name) {
+        fileDeleteTasks.push(
+          apiRequest<{ message: string }>(`/api/files/${encodeURIComponent(originalAudioName)}`, {
+            method: "DELETE",
+            token,
+          }),
+        );
+      }
+      if (fileDeleteTasks.length > 0) {
+        await Promise.allSettled(fileDeleteTasks);
+      }
+
       await fetchDiaries(token);
       closeEditModal();
     } catch (err) {
@@ -508,6 +533,34 @@ export default function DiaryPage() {
                     accept="image/*"
                     onChange={(e) => uploadFile(e, "image", "edit")}
                   />
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    新しい画像を選択しない場合、現在の画像がそのまま保存されます。
+                  </p>
+                  {editForm.image_url ? (
+                    <div className="mt-2 rounded border border-zinc-200 p-2 dark:border-zinc-700">
+                      <p className="mb-2 text-xs text-zinc-600 dark:text-zinc-300">
+                        現在の画像: {editForm.image_name || "保存済み画像"}
+                      </p>
+                      {apiFileUrl(editForm.image_url) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={apiFileUrl(editForm.image_url) ?? undefined}
+                          alt="現在の画像"
+                          className="max-h-40 w-full rounded object-cover"
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateEdit("image_url", "");
+                          updateEdit("image_name", "");
+                        }}
+                        className="mt-2 rounded border border-rose-300 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                      >
+                        画像を外す
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">音声（10MBまで）</label>
@@ -517,6 +570,31 @@ export default function DiaryPage() {
                     accept=".mp3,.wav,.ogg,.m4a,.aac,.webm,audio/*"
                     onChange={(e) => uploadFile(e, "audio", "edit")}
                   />
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    新しい音声を選択しない場合、現在の音声がそのまま保存されます。
+                  </p>
+                  {editForm.audio_url ? (
+                    <div className="mt-2 rounded border border-zinc-200 p-2 dark:border-zinc-700">
+                      <p className="mb-2 text-xs text-zinc-600 dark:text-zinc-300">
+                        現在の音声: {editForm.audio_name || "保存済み音声"}
+                      </p>
+                      {apiFileUrl(editForm.audio_url) ? (
+                        <audio controls className="w-full">
+                          <source src={apiFileUrl(editForm.audio_url) ?? undefined} />
+                        </audio>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateEdit("audio_url", "");
+                          updateEdit("audio_name", "");
+                        }}
+                        className="mt-2 rounded border border-rose-300 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                      >
+                        音声を外す
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
