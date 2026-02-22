@@ -269,12 +269,17 @@ export default function DiaryPage() {
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">画像（5MBまで）</label>
-              <input className="text-sm text-zinc-700 dark:text-zinc-200" type="file" accept="image/*" onChange={(e) => uploadFile(e, "image")} />
+              <input
+                className="w-full cursor-pointer rounded-md border border-zinc-300 bg-white p-2 text-sm text-zinc-700 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-1.5 file:font-medium file:text-white hover:file:bg-sky-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                type="file"
+                accept="image/*"
+                onChange={(e) => uploadFile(e, "image")}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">音声（10MBまで）</label>
               <input
-                className="text-sm text-zinc-700 dark:text-zinc-200"
+                className="w-full cursor-pointer rounded-md border border-zinc-300 bg-white p-2 text-sm text-zinc-700 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:font-medium file:text-white hover:file:bg-emerald-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
                 type="file"
                 accept=".mp3,.wav,.ogg,.m4a,.aac,.webm,audio/*"
                 onChange={(e) => uploadFile(e, "audio")}
