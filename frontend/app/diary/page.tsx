@@ -226,7 +226,7 @@ export default function DiaryPage() {
               <select
                 value={form.weather}
                 onChange={(e) => update("weather", e.target.value)}
-                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+              className="w-full rounded border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
               >
                 {weatherOptions.map((w) => (
                   <option key={w.value} value={w.value}>
@@ -241,7 +241,7 @@ export default function DiaryPage() {
             placeholder="今日のことを書いてください..."
             value={form.content}
             onChange={(e) => update("content", e.target.value)}
-            className="min-h-28 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className="min-h-28 w-full rounded border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
           />
 
           {([
@@ -261,7 +261,7 @@ export default function DiaryPage() {
               <textarea
                 value={form[key]}
                 onChange={(e) => update(key, e.target.value)}
-                className="min-h-20 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+                className="min-h-20 w-full rounded border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
               />
             </div>
           ))}

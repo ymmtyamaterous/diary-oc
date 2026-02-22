@@ -331,6 +331,7 @@ func (s *Server) handleCreateDiary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var entry model.DiaryEntry
+	var entryDate pgtype.Date
 	err := s.db.QueryRow(r.Context(), `
 		INSERT INTO diary_entries (
 			user_id, content, date, weather, is_public,
@@ -377,7 +378,7 @@ func (s *Server) handleCreateDiary(w http.ResponseWriter, r *http.Request) {
 		&entry.ID,
 		&entry.UserID,
 		newNullableString(&entry.Content),
-		&entry.Date,
+		&entryDate,
 		newNullableString(&entry.Weather),
 		&entry.IsPublic,
 		newNullableString(&entry.ImageURL),
@@ -400,6 +401,9 @@ func (s *Server) handleCreateDiary(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "日記の保存に失敗しました")
 		return
+	}
+	if entryDate.Valid {
+		entry.Date = entryDate.Time.Format("2006-01-02")
 	}
 
 	writeData(w, http.StatusCreated, entry)
@@ -725,11 +729,12 @@ func emptyToNil(value *string) *string {
 
 func scanDiaryEntry(row pgx.Row) (model.DiaryEntry, error) {
 	entry := model.DiaryEntry{}
+	var date pgtype.Date
 	err := row.Scan(
 		&entry.ID,
 		&entry.UserID,
 		newNullableString(&entry.Content),
-		&entry.Date,
+		&date,
 		newNullableString(&entry.Weather),
 		&entry.IsPublic,
 		newNullableString(&entry.ImageURL),
@@ -749,15 +754,19 @@ func scanDiaryEntry(row pgx.Row) (model.DiaryEntry, error) {
 		&entry.CreatedAt,
 		&entry.UpdatedAt,
 	)
+	if err == nil && date.Valid {
+		entry.Date = date.Time.Format("2006-01-02")
+	}
 	return entry, err
 }
 
 func scanPublicDiaryEntry(row pgx.Row) (model.PublicDiaryEntry, error) {
 	entry := model.PublicDiaryEntry{}
+	var date pgtype.Date
 	err := row.Scan(
 		&entry.ID,
 		newNullableString(&entry.Content),
-		&entry.Date,
+		&date,
 		newNullableString(&entry.Weather),
 		newNullableString(&entry.ImageURL),
 		newNullableString(&entry.AudioURL),
@@ -775,6 +784,9 @@ func scanPublicDiaryEntry(row pgx.Row) (model.PublicDiaryEntry, error) {
 		&entry.AuthorName,
 		newNullableString(&entry.AuthorPhoto),
 	)
+	if err == nil && date.Valid {
+		entry.Date = date.Time.Format("2006-01-02")
+	}
 	return entry, err
 }
 

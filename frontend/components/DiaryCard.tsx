@@ -33,7 +33,7 @@ export function DiaryCard({ entry, showActions = false, onToggle, onDelete }: Pr
           {weather ? <span>{weather}</span> : null}
         </div>
         {"is_public" in entry ? (
-          <span className={`rounded px-2 py-0.5 text-xs ${entry.is_public ? "bg-emerald-100 text-emerald-700" : "bg-zinc-200 text-zinc-700"}`}>
+          <span className={`rounded px-2 py-0.5 text-xs ${entry.is_public ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" : "bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"}`}>
             {entry.is_public ? "公開中" : "非公開"}
           </span>
         ) : null}
