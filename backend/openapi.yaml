@@ -1,0 +1,262 @@
+openapi: 3.0.3
+info:
+  title: Diary Open Close API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /api/auth/register:
+    post:
+      summary: Register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/auth/me:
+    get:
+      summary: Current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/diaries:
+    get:
+      summary: List own diaries
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create diary
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiaryCreateRequest'
+      responses:
+        '201':
+          description: Created
+  /api/diaries/public:
+    get:
+      summary: List public diaries
+      responses:
+        '200':
+          description: OK
+  /api/diaries/{id}:
+    delete:
+      summary: Delete diary
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deleted
+  /api/diaries/{id}/visibility:
+    patch:
+      summary: Update diary visibility
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_public]
+              properties:
+                is_public:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated
+  /api/upload/image:
+    post:
+      summary: Upload image
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Uploaded
+  /api/upload/audio:
+    post:
+      summary: Upload audio
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Uploaded
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        display_name:
+          type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        display_name:
+          type: string
+        profile_image_url:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    DiaryCreateRequest:
+      type: object
+      required: [date]
+      properties:
+        content:
+          type: string
+          nullable: true
+        date:
+          type: string
+        weather:
+          type: string
+          nullable: true
+        is_public:
+          type: boolean
+        image_url:
+          type: string
+          nullable: true
+        image_name:
+          type: string
+          nullable: true
+        audio_url:
+          type: string
+          nullable: true
+        audio_name:
+          type: string
+          nullable: true
+        events:
+          type: string
+          nullable: true
+        emotions:
+          type: string
+          nullable: true
+        good_things:
+          type: string
+          nullable: true
+        reflections:
+          type: string
+          nullable: true
+        gratitude:
+          type: string
+          nullable: true
+        tomorrow_goals:
+          type: string
+          nullable: true
+        tomorrow_looking_forward:
+          type: string
+          nullable: true
+        learnings:
+          type: string
+          nullable: true
+        health_habits:
+          type: string
+          nullable: true
+        today_in_one_word:
+          type: string
+          nullable: true
