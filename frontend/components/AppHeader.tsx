@@ -73,7 +73,13 @@ export function AppHeader() {
             href="/diary"
             className="rounded-md px-3 py-1.5 text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
-            📝 マイ日記
+            ✍️ 日記登録
+          </Link>
+          <Link
+            href="/diary/list"
+            className="rounded-md px-3 py-1.5 text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            🗂️ 日記一覧
           </Link>
           <Link
             href="/public"
