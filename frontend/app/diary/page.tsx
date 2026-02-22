@@ -205,28 +205,28 @@ export default function DiaryPage() {
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-        <h1 className="mb-4 text-xl font-bold">マイ日記</h1>
-        {error ? <p className="mb-3 rounded bg-rose-100 px-3 py-2 text-rose-700">{error}</p> : null}
+      <section className="rounded-xl border border-zinc-200 bg-white p-5 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+        <h1 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">マイ日記</h1>
+        {error ? <p className="mb-3 rounded bg-rose-100 px-3 py-2 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p> : null}
 
         <form onSubmit={submitDiary} className="space-y-3">
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm">日付</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">日付</label>
               <input
                 type="date"
                 value={form.date}
                 onChange={(e) => update("date", e.target.value)}
-                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+                className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                 required
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm">天気</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">天気</label>
               <select
                 value={form.weather}
                 onChange={(e) => update("weather", e.target.value)}
-              className="w-full rounded border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               >
                 {weatherOptions.map((w) => (
                   <option key={w.value} value={w.value}>
@@ -241,7 +241,7 @@ export default function DiaryPage() {
             placeholder="今日のことを書いてください..."
             value={form.content}
             onChange={(e) => update("content", e.target.value)}
-            className="min-h-28 w-full rounded border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+            className="min-h-28 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
           />
 
           {([
@@ -257,23 +257,24 @@ export default function DiaryPage() {
             ["today_in_one_word", "🏷️ 今日を一言で"],
           ] as const).map(([key, label]) => (
             <div key={key}>
-              <label className="mb-1 block text-sm">{label}</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">{label}</label>
               <textarea
                 value={form[key]}
                 onChange={(e) => update(key, e.target.value)}
-                className="min-h-20 w-full rounded border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+                className="min-h-20 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
               />
             </div>
           ))}
 
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm">画像（5MBまで）</label>
-              <input type="file" accept="image/*" onChange={(e) => uploadFile(e, "image")} />
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">画像（5MBまで）</label>
+              <input className="text-sm text-zinc-700 dark:text-zinc-200" type="file" accept="image/*" onChange={(e) => uploadFile(e, "image")} />
             </div>
             <div>
-              <label className="mb-1 block text-sm">音声（10MBまで）</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200">音声（10MBまで）</label>
               <input
+                className="text-sm text-zinc-700 dark:text-zinc-200"
                 type="file"
                 accept=".mp3,.wav,.ogg,.m4a,.aac,.webm,audio/*"
                 onChange={(e) => uploadFile(e, "audio")}
@@ -281,7 +282,7 @@ export default function DiaryPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
             <input
               type="checkbox"
               checked={form.is_public}
@@ -301,7 +302,7 @@ export default function DiaryPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">日記一覧</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">日記一覧</h2>
         {entries.map((entry) => (
           <DiaryCard
             key={entry.id}
@@ -317,13 +318,13 @@ export default function DiaryPage() {
 
       {confirmDeleteId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-5 dark:bg-zinc-900">
-            <p className="mb-4">この日記を削除しますか？</p>
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+            <p className="mb-4 text-zinc-900 dark:text-zinc-100">この日記を削除しますか？</p>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmDeleteId(null)}
-                className="rounded border border-zinc-300 px-3 py-1.5 dark:border-zinc-700"
+                className="rounded border border-zinc-300 px-3 py-1.5 text-zinc-800 dark:border-zinc-700 dark:text-zinc-100"
               >
                 キャンセル
               </button>

@@ -25,8 +25,8 @@ export function DiaryCard({ entry, showActions = false, onToggle, onDelete }: Pr
   const weather = entry.weather ? `${weatherIcon[entry.weather] ?? "🌤️"} ${entry.weather}` : "";
 
   return (
-    <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-500">
+    <article className="rounded-xl border border-zinc-200 bg-white p-4 text-zinc-900 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600 dark:text-zinc-300">
         <div className="flex items-center gap-2">
           {"author_name" in entry ? <span>👤 {entry.author_name}</span> : null}
           <span>{new Date(entry.date).toLocaleDateString("ja-JP")}</span>
@@ -39,9 +39,9 @@ export function DiaryCard({ entry, showActions = false, onToggle, onDelete }: Pr
         ) : null}
       </div>
 
-      {entry.content ? <p className="mb-3 whitespace-pre-wrap">{entry.content}</p> : null}
+      {entry.content ? <p className="mb-3 whitespace-pre-wrap text-zinc-900 dark:text-zinc-100">{entry.content}</p> : null}
 
-      <div className="grid gap-2 text-sm">
+      <div className="grid gap-2 text-sm text-zinc-800 dark:text-zinc-200">
         {entry.events ? <p>📝 出来事: {entry.events}</p> : null}
         {entry.emotions ? <p>💭 感情: {entry.emotions}</p> : null}
         {entry.good_things ? <p>😊 よかったこと: {entry.good_things}</p> : null}

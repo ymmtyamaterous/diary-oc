@@ -64,34 +64,34 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/95 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="text-lg font-bold text-sky-600">
+        <Link href="/" className="text-lg font-bold text-sky-600 dark:text-sky-400">
           Diary Open Close
         </Link>
 
         <nav className="flex items-center gap-2 text-sm">
           <Link
             href="/diary"
-            className="rounded-md px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="rounded-md px-3 py-1.5 text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             📝 マイ日記
           </Link>
           <Link
             href="/public"
-            className="rounded-md px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="rounded-md px-3 py-1.5 text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             🌍 みんなの日記
           </Link>
           <button
             type="button"
             onClick={toggleTheme}
-            className="rounded-md px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="rounded-md px-3 py-1.5 text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
             aria-label="テーマ切替"
           >
             {isDark ? "☀️" : "🌙"}
           </button>
           {user ? (
             <div className="flex items-center gap-2 rounded-md border border-zinc-200 px-2 py-1 dark:border-zinc-800">
-              <span className="max-w-24 truncate">{user.display_name}</span>
+              <span className="max-w-24 truncate font-medium text-zinc-800 dark:text-zinc-100">{user.display_name}</span>
               <button
                 type="button"
                 onClick={logout}
